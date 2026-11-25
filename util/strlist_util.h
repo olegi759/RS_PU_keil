@@ -1,0 +1,42 @@
+/*
+ * strlist_util.h
+ *
+ *  Created on: 8 мая 2026 г.
+ *      Author: Rafael Boltachev
+ */
+
+#ifndef UTIL_STRLIST_UTIL_H_
+#define UTIL_STRLIST_UTIL_H_
+
+#include <stdint.h>
+#include "def_util.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct _strlist {
+	char * buf;
+	int buf_size;
+} strlist_t;
+
+
+void strlist_init(strlist_t * strlist, char * buf, int buf_size);
+void strlist_set_text(strlist_t * strlist, char * text);
+void strlist_add_line(strlist_t * strlist, char * line);
+int strlist_get_items_count(strlist_t * strlist);
+char * strlist_get_item(strlist_t * strlist, int index, int * item_len);
+void strlist_clear(strlist_t * strlist);
+
+
+
+int strlist_get_items_count_from_str(const char * str);
+char * strlist_get_item_from_str(const char * str, int index, int * item_len);
+BOOL strlist_remove_item_from_str(const char * str, int index);
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* UTIL_STRLIST_UTIL_H_ */
