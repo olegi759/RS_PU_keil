@@ -29,8 +29,8 @@
 
 //RS1 СЌС‚Рѕ UART4
 
-//#define DEBUG_UART4_UART7	1
-//#define DEBUG_UART4_UART7_ONLY		  PD_CMD_SPISOK_PU
+#define DEBUG_UART4_UART7	1
+#define DEBUG_UART4_UART7_ONLY		  PD_CMD_SPISOK_PU
 
 
 //РІСЂРµРјСЏ РїСЂРёРЅСЏС‚РёРµ РїР°РєРµС‚Р° РїРѕ РєРѕР»СЊС†Сѓ

@@ -507,9 +507,9 @@ void base64Encode( const unsigned char *input, unsigned int input_len, char *out
 
 void parse_http_params(char * str, parse_http_params_item_func_t item_func, void * params)
 {
-
 	  char * ptr, * ptre, * val;
 	  char buf[MAX_STR_SIZE];
+	  static char decoded[MAX_STR_SIZE];      /* статический: не растим стек */
 
 	  ptr = str;
 
@@ -526,6 +526,10 @@ void parse_http_params(char * str, parse_http_params_item_func_t item_func, void
 	     if (val) {
 	        *val = '\0';
 	        val++;
+	     }
+	     if (val) {                        
+	        url_decode(val, decoded);      
+	        val = decoded;
 	     }
 	     item_func(buf, val, params);
 	   }

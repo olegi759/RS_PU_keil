@@ -659,7 +659,7 @@ void ulogmem(void * mem, uint16_t mem_size, BOOL is_us)
 		if (is_us) {
 			strcat_s(str, sizeof(str), us2hexstr(u16mem[i]));
 		} else {
-			strcat_s(str, sizeof(str), uc2hexstr(u8mem[i]));
+			strcat_s(str, sizeof(str), uc2hexstr(u8mem[i])); 
 		}
 		strcat_s(str, sizeof(str), " ");
 	}
