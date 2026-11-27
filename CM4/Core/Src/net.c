@@ -59,6 +59,7 @@ static uint8_t TX_BUF[DATA_BUF_SIZE];
 
 
 static wiz_NetInfo net_info = {0};
+static bool is_http_server_init = false;
 
 
 void W5500_Select(void)
@@ -148,7 +149,7 @@ void net_print_net_info(wiz_NetInfo * pnet_info)
     );
 
 }
-static uint8_t chip_init_cnt = 0;
+
 void net_init_continue(uint8_t chip_num)
 {
     ulog_fmt(CONM"net: W5500 #%u read chip net settings..."CRLF, chip_num);
@@ -201,17 +202,16 @@ void net_init_continue(uint8_t chip_num)
 */
 	display_reg_webContent_list();
 #else
-	chip_init_cnt++;
 
-	if(chip_init_cnt < _WIZCHIP_CHIP_NUM_) return;
-
-	ulog(CONM"net: http server init..."CRLF);
-	http_server_init();
+	//ulog(CONM"net: http server init..."CRLF);
+	if(!is_http_server_init){
+		http_server_init();
+		is_http_server_init = true;
+	}
 	ulog(CONM"net: web socket servet init..."CRLF);
-	ws_server_init(4, 8080, 0); // протокольный WS (ctx 0)
-	ws_server_init(12, 8080, 1); // протокольный WS (ctx 1)
+	if(chip_num == 0) ws_server_init(4, 8080, 0); // протокольный WS (ctx 0)
+	else if(chip_num == 1) ws_server_init(12, 8080, 1); // протокольный WS (ctx 1)
 
-	chip_init_cnt = 0;
 #endif
 
 

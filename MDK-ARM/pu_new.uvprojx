@@ -338,7 +338,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls>-Wno-typedef-redefinition</MiscControls>
-              <Define>CORE_CM4,USE_HAL_DRIVER,STM32H747xx,USE_PWR_LDO_SUPPLY, USE_FULL_LL_DRIVER, VERSION=\"2.0.0.0\"</Define>
+              <Define>CORE_CM4,USE_HAL_DRIVER,STM32H747xx,USE_PWR_LDO_SUPPLY, USE_FULL_LL_DRIVER, VERSION=\"2.0.1.1\"</Define>
               <Undefine></Undefine>
               <IncludePath>../CM4/Core/Inc;../CM4/Core/Src;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include;../mx25lm51245g;../util;../pcm1753;../common;../fatfs;../libmad;../softuart;../opus;../opus/include;../opus/celt;../opus/silk;../opus/silk/fixed;../opus/src;../w5500/ioLibrary_driver/Ethernet;../w5500/ioLibrary_driver/Internet/DHCP;../w5500/ioLibrary_driver/Internet/DNS;../w5500/ioLibrary_driver/Internet/httpServer;../w5500/ioLibrary_driver/Application/loopback;../ch378;../bq32000;..\CM7\Core\Inc;../CM7/Core/Inc/Screens;..\Drivers\STM32H7xx_HAL_Driver\Src;..\i2c2;..\ws_rubetec;..\w5500\ioLibrary_Driver\Ethernet\W5500</IncludePath>
             </VariousControls>
@@ -3562,7 +3562,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls>-Wno-typedef-redefinition</MiscControls>
-              <Define>CORE_CM7,USE_HAL_DRIVER,STM32H747xx,USE_PWR_LDO_SUPPLY,alloca=__builtin_alloca,HAL_QSPI_MODULE_ENABLED,HAL_SPI_MODULE_ENABLED,VERSION=\"2.0.0.0\"</Define>
+              <Define>CORE_CM7,USE_HAL_DRIVER,STM32H747xx,USE_PWR_LDO_SUPPLY,alloca=__builtin_alloca,HAL_QSPI_MODULE_ENABLED,HAL_SPI_MODULE_ENABLED,VERSION=\"2.0.1.2\"</Define>
               <Undefine></Undefine>
               <IncludePath>..\CM4\Core\Src;..\CM7\Core\Src;..\util;..\common;..\fatfs;..\softuart;..\w5500\ioLibrary_Driver\Ethernet;..\w5500\ioLibrary_Driver\Internet\DHCP;..\w5500\ioLibrary_Driver\Internet\DNS;..\w5500\ioLibrary_Driver\Internet\httpServer;..\w5500\ioLibrary_Driver\Application\loopback;..\mx25lm51245g;..\bq32000;..\CM7\Core\Inc;..\CM4\Core\Inc;..\CM7\Core\Inc\Screens;..\pcm1753;..\opus\src;..\opus\silk;..\opus\celt;..\opus\;..\libmad;..\ch378;..\bq32000;..\Drivers\STM32H7xx_HAL_Driver\Inc;..\Drivers\STM32H7xx_HAL_Driver\Inc\Legacy;..\Drivers\CMSIS\Device\ST\STM32H7xx\Include;..\Drivers\CMSIS\Include;..\opus\include;..\opus\silk\fixed</IncludePath>
             </VariousControls>
