@@ -345,7 +345,13 @@ void net_init(void)
 	reg_dhcp_cbfunc(Callback_IPAssigned, Callback_IPAssigned, Callback_IPConflict);
 
 	for (uint8_t i = 0; i < _WIZCHIP_CHIP_NUM_; i++) {
+        uint8_t ver = getVERSIONR(i);
+		if (ver != 0x04){ 
+			ulog_fmt(CONM"net: WIZCHIP version ERROR (W5500 #%d, version = %u)"CRLF, i, ver);
+			return;
+		}
 		if (setting.chipsNetInfo[i].dhcp) {
+            
 			/* MAC должен быть в чипе до DHCP — DHCP_init читает SHAR */
 			setSHAR(setting.chipsNetInfo[i].mac, (uint8_t)i);
 

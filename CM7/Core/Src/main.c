@@ -1,4 +1,4 @@
-﻿/* USER CODE BEGIN Header */
+/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.c
@@ -39,6 +39,7 @@
 #include "mchs_mic.h"
 #include "pu.h"
 #include "sendopus.h"
+#include "i2c50.h"
 #include "mki_data.h"
 #include "playopus.h"
 #include "beep.h"
@@ -237,7 +238,7 @@ void timers_on_1sec(void)
 {
 	HAL_IWDG_Refresh(&hiwdg);
 
-	if ((pu_test_enable_tick) && (HAL_DiffTick(pu_test_enable_tick) > 60000)) {
+	if  ((pu_test_enable_tick) && (HAL_DiffTick(pu_test_enable_tick) > 60000)) {
 		//screens_button_unpress(MKI_KEY_TEST);
 		pu_test_enable_tick = 0;
 		beep_off();
@@ -314,9 +315,9 @@ void timers_on_1sec(void)
 int main(void)
 {
 
-  /* USER CODE BEGIN 1 */
+     /* USER CODE BEGIN 1 */
 
-    /*
+     /*
      * To be independent on CM4 boot option bytes config,
      * application will force second core to start by setting its relevant bit in RCC registers.
      *
@@ -337,10 +338,10 @@ int main(void)
 	//RCC->AHB1ENR |= RCC_AHB1ENR_SRAM1EN | RCC_AHB1ENR_SRAM2EN | RCC_AHB1ENR_SRAM3EN;
 	RCC->AHB2ENR |= RCC_AHB2ENR_SRAM1EN | RCC_AHB2ENR_SRAM2EN | RCC_AHB2ENR_SRAM3EN;
 
-  cm7core_init();
-  //cm7core_send_to_CM4_cmd_only(CORE_CMD_I_REBOOT); //Р РЋР РЏ Р В РЎвЂ”Р В Р’ВµР РЋР вЂљР В Р’ВµР В РЎвЂ“Р РЋР вЂљР РЋРЎвЂњР В Р’В·Р В РЎвЂР В Р’В»Р РЋР С“Р РЋР РЏ
+    cm7core_init();
+    //cm7core_send_to_CM4_cmd_only(CORE_CMD_I_REBOOT); //Р РЋР РЏ Р В РЎвЂ”Р В Р’ВµР РЋР вЂљР В Р’ВµР В РЎвЂ“Р РЋР вЂљР РЋРЎвЂњР В Р’В·Р В РЎвЂР В Р’В»Р РЋР С“Р РЋР РЏ
 
-  /* USER CODE END 1 */
+    /* USER CODE END 1 */
 /* USER CODE BEGIN Boot_Mode_Sequence_0 */
 #if defined(DUAL_CORE_BOOT_SYNC_SEQUENCE)
   int32_t timeout;
@@ -572,6 +573,11 @@ Error_Handler();
 
   playmem_start((void *)start_sound, sizeof(start_sound));
 
+  /* I2C2 link to ModulInterface (F103): 50-byte packets with CRC16.
+     Initializes I2C2 (PF0/PF1); periodic poll is I2C50_Task() in the loop.
+     I2C2 master runs on CM7 (CM4 does not boot on this board, see report). */
+  (void)I2C50_Init();
+
   ulog(CONM"PU begin loop "CRLF);
 
 
@@ -612,6 +618,8 @@ Error_Handler();
 
 
 	  cm7core_task(); //Р В РЎвЂќР В РЎвЂўР В РЎВР В РЎВР В Р’В°Р В Р вЂ¦Р В РўвЂР РЋРІР‚в„– Р В РЎвЂўР РЋРІР‚С™ CM4
+  /* I2C2 exchange with ModulInterface: once per second, ~10 ms max */
+	  I2C50_Task();
 
 	  playopus_task(); //Р В Р вЂ Р В РЎвЂўР В Р’В·Р В РЎвЂ”Р РЋР вЂљР В РЎвЂўР В РЎвЂР В Р’В·Р В Р вЂ Р В Р’ВµР В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’Вµ opus
 

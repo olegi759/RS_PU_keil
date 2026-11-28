@@ -228,16 +228,10 @@ void cm4core_rcv_from_CM7(uint8_t * packet, uint16_t packet_len)
 		break;
 
 		case CORE_CMD_PD_I2C_SEND:
-			/* I2C2 line (same PD ring as UART4/UART7):
-			   send frame to slave, read answer, pass it back to CM7 */
-			{
-				uint8_t pd_answer[PD_I2C_READ_SIZE];
-				uint16_t pd_answer_len = 0;
-
-				if (PD_I2C_SendReceive(&packet[1], (uint16_t)(packet_len - 1), pd_answer, &pd_answer_len)) {
-					cm4core_pd_i2c_rcv(pd_answer, pd_answer_len);
-				}
-			}
+			/* I2C2 is used by the I2C50 link to ModulInterface v5
+			   (50-byte packets with CRC16, see i2c50.c), so the old
+			   PD-over-I2C transport is not used anymore. The IPC command
+			   stays as a no-op: the CM7 ring keeps working as before. */
 		break;
 		case CORE_CMD_ADD_LOG:
 			filelog((char *)&packet[1]);

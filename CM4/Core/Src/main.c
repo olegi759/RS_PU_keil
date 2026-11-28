@@ -126,6 +126,12 @@ static void MX_SPI6_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+/* Без этого символа библиотека ARM подключает semihosting-вариант инициализации argv
+   (_sys_command_string -> BKPT): ядро CM4 зависает в __rt_entry ещё до main().
+   Определение находится в блоке USER CODE, чтобы переживать генерацию CubeMX. */
+void __ARM_use_no_argv(void) { }
+
+
 volatile uint32_t cm4_tick_now = 0;
 volatile uint32_t cm4_tick_old = 0;
 volatile uint32_t cm4_tick_50ms = 0;

@@ -10,13 +10,13 @@
       <TargetName>pu_new_CM4</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
-      <pCCUsed>6240000::V6.24::ARMCLANG</pCCUsed>
+      <pCCUsed>6140001::V6.14.1::ARMCLANG</pCCUsed>
       <uAC6>1</uAC6>
       <TargetOption>
         <TargetCommonOption>
           <Device>STM32H747IITx:CM4</Device>
           <Vendor>STMicroelectronics</Vendor>
-          <PackID>Keil.STM32H7xx_DFP.4.1.3</PackID>
+          <PackID>Keil.STM32H7xx_DFP.4.0.0</PackID>
           <PackURL>https://www.keil.com/pack/</PackURL>
           <Cpu>IRAM(0x10000000,0x00048000) IROM(0x08100000,0x00100000) CPUTYPE("Cortex-M4") FPU2 CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
@@ -80,9 +80,9 @@
             <nStopB2X>0</nStopB2X>
           </BeforeMake>
           <AfterMake>
-            <RunUserProg1>0</RunUserProg1>
+            <RunUserProg1>1</RunUserProg1>
             <RunUserProg2>0</RunUserProg2>
-            <UserProg1Name></UserProg1Name>
+            <UserProg1Name>$K\ARM\ARMCLANG\Bin\fromelf.exe --bin --output "pu_new_CM4\@L.bin" "!L"</UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
@@ -186,7 +186,6 @@
             <RvdsVP>2</RvdsVP>
             <RvdsMve>0</RvdsMve>
             <RvdsCdeCp>0</RvdsCdeCp>
-            <nBranchProt>0</nBranchProt>
             <hadIRAM2>0</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
@@ -3188,6 +3187,11 @@
               <FileType>1</FileType>
               <FilePath>..\i2c2\i2c2.c</FilePath>
             </File>
+            <File>
+              <FileName>i2c50.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\i2c2\i2c50.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -3234,13 +3238,13 @@
       <TargetName>pu_new_CM7</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
-      <pCCUsed>6240000::V6.24::ARMCLANG</pCCUsed>
+      <pCCUsed>6140001::V6.14.1::ARMCLANG</pCCUsed>
       <uAC6>1</uAC6>
       <TargetOption>
         <TargetCommonOption>
           <Device>STM32H747IITx:CM7</Device>
           <Vendor>STMicroelectronics</Vendor>
-          <PackID>Keil.STM32H7xx_DFP.4.1.3</PackID>
+          <PackID>Keil.STM32H7xx_DFP.4.0.0</PackID>
           <PackURL>https://www.keil.com/pack/</PackURL>
           <Cpu>IRAM(0x20000000-0x2001FFFF) IRAM2(0x00000000-0xFFFF) IROM(0x8000000-0x80FFFFF) CLOCK(12000000) FPU3(DFPU) CPUTYPE("Cortex-M7") ELITTLE TZ</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
@@ -3304,9 +3308,9 @@
             <nStopB2X>0</nStopB2X>
           </BeforeMake>
           <AfterMake>
-            <RunUserProg1>0</RunUserProg1>
+            <RunUserProg1>1</RunUserProg1>
             <RunUserProg2>0</RunUserProg2>
-            <UserProg1Name></UserProg1Name>
+            <UserProg1Name>$K\ARM\ARMCLANG\Bin\fromelf.exe --bin --output "pu_new_CM7\@L.bin" "!L"</UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
@@ -3358,7 +3362,7 @@
             <RunIndependent>0</RunIndependent>
             <UpdateFlashBeforeDebugging>1</UpdateFlashBeforeDebugging>
             <Capability>1</Capability>
-            <DriverSelection>4101</DriverSelection>
+            <DriverSelection>4096</DriverSelection>
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\UL2CM3.DLL</Flash2>
@@ -3410,7 +3414,6 @@
             <RvdsVP>3</RvdsVP>
             <RvdsMve>0</RvdsMve>
             <RvdsCdeCp>0</RvdsCdeCp>
-            <nBranchProt>0</nBranchProt>
             <hadIRAM2>1</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
@@ -3564,7 +3567,7 @@
               <MiscControls>-Wno-typedef-redefinition</MiscControls>
               <Define>CORE_CM7,USE_HAL_DRIVER,STM32H747xx,USE_PWR_LDO_SUPPLY,alloca=__builtin_alloca,HAL_QSPI_MODULE_ENABLED,HAL_SPI_MODULE_ENABLED,VERSION=\"2.0.0.0\"</Define>
               <Undefine></Undefine>
-              <IncludePath>..\CM4\Core\Src;..\CM7\Core\Src;..\util;..\common;..\fatfs;..\softuart;..\w5500\ioLibrary_Driver\Ethernet;..\w5500\ioLibrary_Driver\Internet\DHCP;..\w5500\ioLibrary_Driver\Internet\DNS;..\w5500\ioLibrary_Driver\Internet\httpServer;..\w5500\ioLibrary_Driver\Application\loopback;..\mx25lm51245g;..\bq32000;..\CM7\Core\Inc;..\CM4\Core\Inc;..\CM7\Core\Inc\Screens;..\pcm1753;..\opus\src;..\opus\silk;..\opus\celt;..\opus\;..\libmad;..\ch378;..\bq32000;..\Drivers\STM32H7xx_HAL_Driver\Inc;..\Drivers\STM32H7xx_HAL_Driver\Inc\Legacy;..\Drivers\CMSIS\Device\ST\STM32H7xx\Include;..\Drivers\CMSIS\Include;..\opus\include;..\opus\silk\fixed</IncludePath>
+              <IncludePath>..\CM4\Core\Src;..\CM7\Core\Src;..\i2c2;..\util;..\common;..\fatfs;..\softuart;..\w5500\ioLibrary_Driver\Ethernet;..\w5500\ioLibrary_Driver\Internet\DHCP;..\w5500\ioLibrary_Driver\Internet\DNS;..\w5500\ioLibrary_Driver\Internet\httpServer;..\w5500\ioLibrary_Driver\Application\loopback;..\mx25lm51245g;..\bq32000;..\CM7\Core\Inc;..\CM4\Core\Inc;..\CM7\Core\Inc\Screens;..\pcm1753;..\opus\src;..\opus\silk;..\opus\celt;..\opus\;..\libmad;..\ch378;..\bq32000;..\Drivers\STM32H7xx_HAL_Driver\Inc;..\Drivers\STM32H7xx_HAL_Driver\Inc\Legacy;..\Drivers\CMSIS\Device\ST\STM32H7xx\Include;..\Drivers\CMSIS\Include;..\opus\include;..\opus\silk\fixed</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -6499,7 +6502,7 @@
               <RVCTZI>0</RVCTZI>
               <RVCTOtherData>0</RVCTOtherData>
               <ModuleSelection>0</ModuleSelection>
-              <IncludeInBuild>0</IncludeInBuild>
+              <IncludeInBuild>1</IncludeInBuild>
               <AlwaysBuild>2</AlwaysBuild>
               <GenerateAssemblyFile>2</GenerateAssemblyFile>
               <AssembleAssemblyFile>2</AssembleAssemblyFile>
@@ -6573,7 +6576,7 @@
                   <RVCTZI>0</RVCTZI>
                   <RVCTOtherData>0</RVCTOtherData>
                   <ModuleSelection>0</ModuleSelection>
-                  <IncludeInBuild>0</IncludeInBuild>
+                  <IncludeInBuild>1</IncludeInBuild>
                   <AlwaysBuild>2</AlwaysBuild>
                   <GenerateAssemblyFile>2</GenerateAssemblyFile>
                   <AssembleAssemblyFile>2</AssembleAssemblyFile>
@@ -6617,6 +6620,11 @@
                   </Cads>
                 </FileArmAds>
               </FileOption>
+            </File>
+            <File>
+              <FileName>i2c50.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\i2c2\i2c50.c</FilePath>
             </File>
           </Files>
         </Group>

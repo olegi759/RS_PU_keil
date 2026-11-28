@@ -49,12 +49,12 @@ void mkk_change_insig_lin(void)
 	}
 
 
-	if ( (pu_mode < PU_MODE_VESHANIE_POJAR)  && fire_lines_insig) {
+	if ( (pu_mode < PU_MODE_VESHANIE_POJAR) && pu_get_fire_lines()) {
 
-		fire_lines_imit = 0;
+		/* fire_lines_imit = 0; -- duplicated input source, keep it */
 		pu_set_mode(PU_MODE_VESHANIE_POJAR);
 
-	} else 	if ( (pu_mode == PU_MODE_VESHANIE_POJAR)  && !fire_lines_insig) {
+	} else 	if ( (pu_mode == PU_MODE_VESHANIE_POJAR) && !pu_get_fire_lines()) {
 		ulog("mkk: !!DELETE goto mode DEJURNIY from POJAR, where fire_lines = 0"CRLF);
 		//fire_lines_imit = old_fire_lenes;
 		//pu_set_mode(PU_MODE_DEJURNIY);

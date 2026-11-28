@@ -135,6 +135,8 @@ void screen1_button_press(uint8_t key)
 					screens_goto(0);
 				break;
 				case SCREEN1_ITEM_PU_MODE_DEJURNIY:
+					/* manual (panel) fire activation is cancelled here */
+					fire_lines_manual = 0;
 					pu_set_mode(PU_MODE_DEJURNIY);
 					screens_goto(0);
 				break;
@@ -151,7 +153,7 @@ void screen1_button_press(uint8_t key)
 						pu_invalid_access_code(CONM"screen1: error MODE_VESHANIE_POJAR by user level"CRLF, 2);
 						return;
 					}
-					fire_lines_imit = 0xFFF;
+					fire_lines_manual = 0xFFF;   /* manual (panel) activation */
 					pu_set_mode(PU_MODE_VESHANIE_POJAR);
 					screens_goto(0);
 				break;
