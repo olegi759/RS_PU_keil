@@ -299,7 +299,7 @@ void default_setting(void)
 	//uids[1] = HAL_GetUIDw1();
 	//uids[2] = HAL_GetUIDw2();
 
-	uid = rand();
+	uid = rand();                  
 	//snprintf(mac_str, sizeof(mac_str), "8A:EF:%02X:%02X:%02X:%02X", (uid >> 24) & 0xFF, (uid >> 16) & 0xFF, (uid >> 8) & 0xFF, uid & 0xFF);
 	//ulog_fmt("def mac: %s"CRLF, mac_str);
 	memcpy(setting.chipsNetInfo[0].mac, str2mac("8A:EF:77:95:C1:84"), sizeof(setting.chipsNetInfo[0].mac));
@@ -399,10 +399,10 @@ BOOL load_setting(const char * path)
 
 			if      (!strcmp(field, "mac"))  memcpy(setting.chipsNetInfo[ch].mac, str2mac(val), sizeof(setting.chipsNetInfo[ch].mac));
 			else if (!strcmp(field, "dhcp")) setting.chipsNetInfo[ch].dhcp = str2bool(val);
-			else if (!strcmp(field, "ip"))   setting.chipsNetInfo[ch].ip   = str2ip(val);
-			else if (!strcmp(field, "mask")) setting.chipsNetInfo[ch].mask = str2ip(val);
-			else if (!strcmp(field, "gw"))   setting.chipsNetInfo[ch].gw   = str2ip(val);
-			else if (!strcmp(field, "dns"))  setting.chipsNetInfo[ch].dns  = str2ip(val);
+			else if (!strcmp(field, "ip"))   setting.chipsNetInfo[ch].ip   = str2ip(val)  ;
+			else if (!strcmp(field, "mask")) setting.chipsNetInfo[ch].mask = str2ip(val)  ;
+			else if (!strcmp(field, "gw"))   setting.chipsNetInfo[ch].gw   = str2ip(val)  ;
+			else if (!strcmp(field, "dns"))  setting.chipsNetInfo[ch].dns  = str2ip(val)  ;
 		}
 		/* старые файлы (без префикса) — это настройки канала 0 */
 		else if (compare_key(buf, key_len, KEY_MAC))  memcpy(setting.chipsNetInfo[0].mac, str2mac(val), sizeof(setting.chipsNetInfo[0].mac));

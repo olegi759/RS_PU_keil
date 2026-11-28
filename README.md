@@ -44,7 +44,7 @@ D:\DA\2_RS_PU\RS-PU_v4\                  <- рабочая папка VS Code (�
 | `pu_new_CM4` | Cortex-M4 | `STM32H747IITx:CM4` | `MDK-ARM\pu_new_CM4\` | `0x08100000` |
 | `pu_new_CM7` | Cortex-M7 | `STM32H747IITx:CM7` | `MDK-ARM\pu_new_CM7\` | `0x08000000` |
 
-У обоих `CreateHexFile = 1`, прошивальщик ST-Link.
+У обоих `CreateHexFile = 1` и After-Build шаг `fromelf`, который дополнительно делает `.bin` из `.axf`; прошивальщик ST-Link.
 
 ## 3. Настройки VS Code, с которыми всё работает
 
@@ -122,6 +122,41 @@ D:\DA\2_RS_PU\RS-PU_v4\                  <- рабочая папка VS Code (�
 4. **Проверить результат** в `MDK-ARM\.vscode\uv4.log` (перезаписывается каждым запуском).
 
 
+## 7. Генерация `.bin` (fromelf)
+
+В обоих таргетах (`pu_new_CM4`, `pu_new_CM7`) включён шаг **Options for Target →
+User → After Build/Rebuild → Run User Program #1**:
+
+```
+$K\ARM\ARMCLANG\Bin\fromelf.exe --bin --output "pu_new_CM4\@L.bin" "!L"
+```
+
+(для CM7 — соответственно `pu_new_CM7\@L.bin`). Ключевые последовательности uVision:
+
+| Код | Что подставляется |
+|---|---|
+| `$K` | каталог установки Keil (`C:\Keil_v5`) |
+| `@L` | `OutputName` таргета (`pu_new_CM4` / `pu_new_CM7`) |
+| `!L` | путь к собранному `.axf` (`pu_new_CM4\pu_new_CM4.axf`) |
+
+Рабочий каталог команды — `MDK-ARM`, поэтому результат появляется рядом с `.axf`:
+
+| Таргет | Файл | Адрес загрузки |
+|---|---|---|
+| `pu_new_CM7` | `MDK-ARM\pu_new_CM7\pu_new_CM7.bin` | `0x08000000` |
+| `pu_new_CM4` | `MDK-ARM\pu_new_CM4\pu_new_CM4.bin` | `0x08100000` |
+
+`--bin` выгружает сплошной образ от начала IROM таргета до последнего байта
+(промежутки заполняются нулями); адрес в файле не хранится, поэтому при прошивке
+его нужно указывать явно: CM7 — `0x08000000`, CM4 — `0x08100000`.
+
+Шаг выполняется при каждом **Build/Rebuild** — в том числе при сборке из VS Code
+через Keil Assistant и из командной строки `UV4 -b`, даже если перекомпилировать
+нечего: `.bin` всегда соответствует текущему `.axf`.
+
+`*.bin` попадает под правило `.gitignore` — это артефакт сборки, в репозиторий он
+не коммитится (в отличие от `.hex`, для которых сделано исключение).
+
 ## 8. Switch target - кнопка рядом с pu_new_CM4
 
 
@@ -142,6 +177,48 @@ Load "pu_new_CM7\\pu_new_CM7.axf"
 Erase Done.Programming Done.Verify OK.Flash Load finished at HH:MM:SS
 ```
 
+## 13. `BUILD_FLASH.cmd` - универсальная сборка и прошивка
+
+Батник кладётся в корень любого проекта Keil (папка, внутри которой есть `*.uvprojx`)
+и переносится между проектами без правок: он сам находит проект, таргеты и МК,
+подбирает ST-LINK с этой платой, собирает и прошивает.
+
+```bat
+BUILD_FLASH.cmd                      :: сборка + прошивка "рабочих" таргетов
+BUILD_FLASH.cmd /rebuild             :: полная пересборка + прошивка
+BUILD_FLASH.cmd /buildonly           :: только собрать
+BUILD_FLASH.cmd /flashonly           :: только прошить
+BUILD_FLASH.cmd /list                :: показать проект, таргеты, ST-LINK и выйти
+BUILD_FLASH.cmd /target:pu_new_CM7   :: только один таргет
+BUILD_FLASH.cmd /sn:48FF6F064988885256281767
+```
+
+Что определяется автоматически:
+
+| Что | Как |
+|---|---|
+| проект | `*.uvprojx` в папке батника и ниже; снимки `.cubemx_snapshot`, `backup`, `template` пропускаются. Если проектов несколько - `/project:ИМЯ` |
+| таргеты | из `.uvprojx`: по умолчанию все с `Selected for Batch Build`, иначе текущий таргет из `.uvoptx`, иначе первый |
+| МК | поле `<Device>` таргета: `STM32H747IITx:CM4` -> МК `STM32H747IITx`, семейство `STM32H7` |
+| ST-LINK | `ST-LINK_CLI -List`, затем подключение к каждой пробе: семейство в ответе должно содержать семейство МК (`STM32H7` -> `STM32H7xx`). Пробы без цели и с другим семейством пропускаются |
+
+Поэтому здесь он собирает и шьёт `pu_new_CM4` и `pu_new_CM7` (порядок - как в
+`.uvprojx`: CM4, затем CM7), а в `ModulInterface_v6 p2p` возьмёт единственный таргет
+на STM32F103RC и выберет уже другой ST-LINK - хотя в `.uvoptx` того проекта записан
+чужой SN.
+
+Перед прошивкой найденный SN прописывается в `.uvoptx` проекта (uVision иначе шьёт
+адаптер, записанный в проекте), после прошивки файл восстанавливается из копии.
+Сборка и прошивка - штатные `UV4 -b`/`-r` и `UV4 -f`, то же, что кнопки Build/Rebuild/
+Download в Keil.
+
+Ключи: `/rebuild`, `/buildonly`, `/flashonly`, `/list`, `/project:ИМЯ`, `/target:ИМЯ`,
+`/all`, `/sn:XXXX` (или `/sn XXXX`), `/pause`, `/nopause`, `/?`. Значения с `=` тоже
+понимаются, но cmd режет аргумент по `=`, поэтому надёжнее двоеточие.
+
+Коды возврата: `0` - успех, `1` - окружение/аргументы/проект, `2` - ST-LINK,
+`3` - сборка, `4` - прошивка. Логи сборки/прошивки пишутся в `%TEMP%\keil_build_flash\`
+(чтобы не мусорить в репозитории), путь печатается в конце.
 ## 14. Чек-лист «всё связано»
 
 - [ ] Рабочая папка VS Code — `...\RS-PU_v4\MDK-ARM`
@@ -150,6 +227,8 @@ Erase Done.Programming Done.Verify OK.Flash Load finished at HH:MM:SS
 - [ ] `MDK-ARM\.vscode\c_cpp_properties.json` содержит `pu_new_CM4` и `pu_new_CM7`
 - [ ] Switch Target переключает таргет, inline-кнопки Build/Rebuild/Download работают
 - [ ] `Rebuild` даёт `0 Error(s), 0 Warning(s)` и свежий `.hex` в папке таргета
+- [ ] Build/Rebuild обновляет `.bin` рядом с `.axf` (шаг `fromelf` в After Build)
+- [ ] `BUILD_FLASH.cmd` из корня проекта сам находит `.uvprojx`, МК и ST-LINK, собирает и прошивает таргеты
 - [ ] `Download` пишет `Flash Load finished` и прошивает **выбранное** ядро
 - [ ] Keil uVision закрыт во время сборки из VS Code
 - [ ] Горячие клавиши `F7`/`Ctrl+Alt+F7`/`Ctrl+Alt+D` не используются

@@ -73,6 +73,7 @@ uint8_t pu_uo_fire = 1;
 uint32_t fire_lines_imit = 0;
 //Отключение детектирования пожара на линиях
 uint32_t fire_lines_insig = 0;
+uint32_t fire_lines_manual = 0;   /* manual (panel) fire activation, not a blocking source */
 
 
 //Опция автоматика линии
@@ -92,6 +93,8 @@ uint8_t uo_manual_time_remaining = 0;
 
 
 static uint8_t pu_start_translation_pojar_repeat = 0;
+/* set while pu_stop_translation() runs: the pcm1753 stop callback must not restart the track */
+BOOL pu_translation_stopping = FALSE;
 uint8_t 	pu_last_active_fire_uo = 1;
 
 
@@ -188,11 +191,19 @@ void pu_invalid_access_code(char * ulog_msg, uint8_t need_level)
 //сработавшие входов линий пожарной сигнализации
 uint32_t pu_get_fire_lines(void)
 {
-	if (fire_lines_imit) return fire_lines_imit;
-
-	return fire_lines_insig;
+	/* Inputs are combined with logical OR: MKK fire inputs (fire_lines_insig) and
+	   the duplicated inputs arriving through fire_lines_imit. Bits 0..23 = inputs 1..24. */
+	return (uint32_t)((fire_lines_insig | fire_lines_imit | fire_lines_manual) & 0x00FFFFFFUL);
 }
 
+
+
+/* fire inputs that BLOCK leaving the fire mode: MKK inputs and the duplicated fire_lines_imit bits.
+   The manual (panel) activation is not a blocking source. */
+uint32_t pu_get_fire_lines_hw(void)
+{
+	return (uint32_t)((fire_lines_insig | fire_lines_imit) & 0x00FFFFFFUL);
+}
 
 
 uint8_t pu_get_fire_lines_cnt(void)
@@ -307,8 +318,8 @@ BOOL pu_put_opus_in_pcm1753_now(uint8_t * opus, uint16_t opus_len)
 	//fulog_fmt("p:%d"CRLF, rc);
 
 	res = (rc > 0);
-
-	if (res) {
+    if (res) {
+	
 		sendopus_frame_size = rc;
 		if (pcm1753_GetStereo()) rc += rc;
 		pcm1753_AudioBufferLwrbWrite(pcm16, rc);
@@ -698,6 +709,14 @@ BOOL pu_start_translation_manual_next_uo(void)
 //раз в 1 сек
 void pu_task(void)
 {
+	/* Periodic (1 Hz) polling of the fire inputs: MKK inputs and the duplicated
+	   inputs from fire_lines_imit; any active bit -> VESHANIE_POJAR. */
+	if ((pu_mode < PU_MODE_VESHANIE_POJAR) && pu_get_fire_lines()) {
+		ulog_fmt(CONM"pu: periodic fire check: lines:%s, goto POJAR"CRLF, u24l2bitstr(pu_get_fire_lines()));
+		pu_set_mode(PU_MODE_VESHANIE_POJAR);
+		return;
+	}
+
 
 	switch (pu_mode) {
 
@@ -725,6 +744,13 @@ BOOL mode_rucnoi_pusk_to_dejurniy_blocked = FALSE;
 void pcm1753_OnStopDMA(void)
 {
 	recv_opus_cnt = 0;
+
+	/* if the DMA was stopped by pu_stop_translation() (mode change / reset) - do not restart the track */
+	if (pu_translation_stopping) {
+		set_mux_sound_right_left(SLR_OFF);
+		pu_enable_sound_lines(0);
+		return;
+	}
 
 
 	if (tilibom_file_name[0] != '\0') {
@@ -834,6 +860,7 @@ void pu_dma_stop(void)
 //Останов трансляции
 void pu_stop_translation(void)
 {
+	pu_translation_stopping = TRUE;
 
 	if (playopus_is_execute() || pcm1753_is_DMA_started() || mchs_mic_is_dma_started()) {
 		ulog(CONM"pu: stop translation"CRLF);
@@ -861,6 +888,7 @@ void pu_stop_translation(void)
 	set_mux_sound_right_left(SLR_OFF);
 
 	decoder_opus_destroy();
+	pu_translation_stopping = FALSE;
 }
 
 /*
@@ -899,6 +927,14 @@ BOOL pu_set_mode(pu_mode_t new_pu_mode)
 	if (new_pu_mode < PU_MODE_DEJURNIY) new_pu_mode = PU_MODE_DEJURNIY;
 
 	if (new_pu_mode == pu_mode) return FALSE;
+
+	/* VESHANIE_POJAR can be left only when no fire input is active:
+	   fire_lines_insig (MKK) and fire_lines_imit (duplicates) are equal sources (OR). */
+	if ((pu_mode == PU_MODE_VESHANIE_POJAR) && (new_pu_mode != PU_MODE_VESHANIE_POJAR) && pu_get_fire_lines_hw()) {
+		ulog_fmt(CONM"pu: leave POJAR blocked, fire lines active:%s"CRLF, u24l2bitstr(pu_get_fire_lines_hw()));
+		SMALL_BEEP;
+		return FALSE;
+	}
 
 	if (new_pu_mode < PU_MODE_VESHANIE_MCHS) {
 
@@ -956,8 +992,9 @@ BOOL pu_set_mode(pu_mode_t new_pu_mode)
 
 		case PU_MODE_DEJURNIY:
 			set_mux_sound_right_left(SLR_OFF);
-			fire_lines_imit = 0;
-			fire_lines_insig = 0;
+			/* fire_lines_imit = 0; -- duplicated fire inputs are an independent source */
+			/* fire_lines_insig = 0; -- MKK inputs are refreshed by mkk_change_insig_lin() */
+			fire_lines_manual = 0;   /* manual activation is cancelled on reset */
 			pu_select_group = FALSE;
 			//filelog_fmt("");
 			screens_goto(0);

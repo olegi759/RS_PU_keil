@@ -536,8 +536,14 @@ void uart4_uart7_ring_check(void)
 
 */
 
-
-//РљРѕРјРјР°РЅРґС‹ РѕС‚ uart4 Рё uart7 СЃР»РµРІР° Рё СЃРїСЂР°РІР°
+// 
+// packet: [0]=daddr [1]=saddr [2..3]=ID/длина [4]=cmd [5..N-3]=data [N-2..N-1]=CRC16
+// 1. CRC неверный → return;                     
+// 2. saddr == мой адрес  (кадр обошёл кольцо)      → rcv_ring_tick[линия]=tick; return;  
+// 3. daddr == мой+1 / мой+2  (моему ПД)            → переупаковать, в CM4, return;  
+// 4. daddr ≠ мой и ≠ 0xFF  («не мне»)              → uart4_uart7_snd_others(huart_number, …); return;   
+// 5. дедуп по ID                                    → return;                        
+// 6. daddr == 0xFF  → PU_CMD_CHANGE_MODE и пр.;  daddr == мой → pd_rcv();  иначе → пересылка 
 void uart4_uart7_rcv(uint8_t huart_number, uint8_t * packet, uint16_t packet_len)
 {
 
@@ -562,40 +568,50 @@ void uart4_uart7_rcv(uint8_t huart_number, uint8_t * packet, uint16_t packet_len
 
 
 
-	if ( packet[1] == setting.uart_local_addr ) { //РїР°РєРµС‚ РѕС‚ СЃРµР±СЏ
+	if ( packet[1] == setting.uart_local_addr ) { //это пакет мне он, прошел кольцо 
 		rcv_ring_tick[huart_number] = HAL_GetTick();
 		return;
 	}
 
-	if ( (packet[0] == setting.uart_local_addr + 1) || (packet[0] == setting.uart_local_addr + 2) ) { //РїР°РєРµС‚ РёР· СЃРµС‚Рё Рє РјРѕРёРј РџР”
+	// локальные ПД панели имеют адреса local+1 (ПД1) и local+2 (ПД2)
+	if ((packet[0] == setting.uart_local_addr + 1) ||
+        (packet[0] == setting.uart_local_addr + 2)) {      // «этот кадр — моему ПД»
+    
+        // ---- 1. дедупликация: отбрасываем кадр, который уже обработали ----
+        rx_id = (packet[2] << 8) | packet[3];              // ID пакета из кольца (big-endian)
+        if (rx_id) {                                       // ID == 0 считаем «без ID»
+            if (rx_id <= count_rx_id) {                    // пришёл не «вперёд» прошлого
+                if (count_rx_id - rx_id < 100) return;     // и не отстал сильнее чем на 100 → дубль
+            }
+        }
+        count_rx_id = rx_id;                               // запомнили последний принятый ID
+    
+        // ---- 2. пересчёт адреса: 11 → 1, 12 → 2 (номер ПД относительно этой панели) ----
+        packet[0] -= setting.uart_local_addr;
+    
+        // ---- 3. пересчёт поля [2..3]: в диалекте ПД здесь не ID, а длина данных ----
+        rx_id = packet_len - 6;                            // длина = 1 (cmd) + cmd_data_len
+        packet[2] = rx_id >> 8;                            // big-endian
+        packet[3] = rx_id & 0xFF;
+    
+        // ---- 4. CRC пересчитываем: байты 0 и 2..3 изменились ----
+        fill_crc16(packet, packet_len);
+    
+        // ---- 5. отдаём в CM4 (CORE_CMD_PD_SEND), дальше — на ПД, и выходим ----
+        cm7core_pd_send(packet, packet_len);
+        return;
+    }
 
-		rx_id = (packet[2] << 8) | packet[3];
-		if (rx_id) {
-			if (rx_id <= count_rx_id) { //РґСѓР±Р»РёСЂСѓСЋС‰РёР№ РїР°РєРµС‚
-				if (count_rx_id - rx_id < 100) return;
-			}
-		}
-		count_rx_id = rx_id;
-
-		packet[0] -= setting.uart_local_addr;
-		rx_id = packet_len - 6;
-		packet[2] = rx_id >> 8;
-		packet[3] = rx_id & 0xFF;
-		fill_crc16(packet, packet_len);
-		cm7core_pd_send(packet, packet_len); //РїРµСЂРµСЃС‹Р»Р°РµРј РЅР° РџР”
+	if ((packet[0] != setting.uart_local_addr) && (packet[0] != 0xFF) ) { // этот пакет пересылаем другим
+		uart4_uart7_snd_others(huart_number, packet, packet_len); 
 		return;
 	}
 
-	if ((packet[0] != setting.uart_local_addr) && (packet[0] != 0xFF) ) { //РїР°РєРµС‚ РЅРµ РјРЅРµ
-		uart4_uart7_snd_others(huart_number, packet, packet_len); //РЅРµ СЃРІРѕР№ РїР°РєРµС‚ РїРµСЂРµРґР°РµРј РґР°Р»СЊС€Рµ С‡РµСЂРµР· С€Р»СЋР·
-		return;
-	}
-
-	//С‚СѓС‚ РїР°РєРµС‚С‹ РјРЅРµ РёР»Рё С€РёСЂРѕРєРѕРІРµС‰Р°С‚РµР»СЊРЅС‹Сѓ
-
+	
+	
 	rx_id = (packet[2] << 8) | packet[3];
 	if (rx_id) {
-		if (rx_id <= count_rx_id) { //РґСѓР±Р»РёСЂСѓСЋС‰РёР№ РїР°РєРµС‚
+		if (rx_id <= count_rx_id) { 
 			if (count_rx_id - rx_id < 100) return;
 		}
 	} else {

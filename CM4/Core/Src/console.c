@@ -44,8 +44,16 @@ void ulog(char *str)
 
 	}
 */
-	SoftUartWaitUntilTxComplate(CONSOLE_SOFT_UART_NUMBER);
-	SoftUartPuts(CONSOLE_SOFT_UART_NUMBER, (uint8_t *)str, strlen(str));
+	uint16_t len;
+
+	if (str == NULL) return;
+	len = (uint16_t)strlen(str);
+	if (len == 0) return;
+
+	/* Non blocking log: bytes are appended to the TX ring buffer and are
+	   shifted out by the TIM7 interrupt. The caller never waits for the
+	   previous line, no data is lost on overflow (counted in TxDropped). */
+	SoftUartPutsRing(CONSOLE_SOFT_UART_NUMBER, (uint8_t *)str, len);
 }
 
 
@@ -67,6 +75,70 @@ void console_replay_bool_cmd(BOOL value, const char * cmd)
 {
 
 	ulog_fmt(CONM"%s_%s"CRLF, (value ? STR_OK : STR_ERROR), cmd);
+}
+
+
+
+/* ===================== LOG SPEED TEST (LOGTEST n) ==========================
+ * Measures how long the firmware is blocked inside ulog() while it pushes
+ * N lines of a fixed length. This is the application-visible log cost: with
+ * the blocking soft-UART log it equals the wire time of the previous line,
+ * with a buffered log it must be near zero.
+ * Test code is identical for the old and the new log implementation.
+ * ========================================================================= */
+#define LOGTEST_LINE_LEN		64		/* bytes per line, CR LF included */
+#define LOGTEST_MAX_N			60		/* keep the burst below the IWDG limit */
+
+static char logtest_line[LOGTEST_LINE_LEN + 1];
+
+void console_logtest(int n)
+{
+	int i;
+	uint32_t c0, c1, t0, t1, us;
+	BOOL dwt_ok;
+
+	if (n < 1) n = 1;
+	if (n > LOGTEST_MAX_N) n = LOGTEST_MAX_N;
+
+	/* fixed length line: "LOGTEST " + 3 digits + space + 'L' * k + CR LF */
+	memset(logtest_line, 'L', LOGTEST_LINE_LEN);
+	memcpy(logtest_line, "LOGTEST ", 8);
+	logtest_line[8]  = '0' + (n / 100) % 10;
+	logtest_line[9]  = '0' + (n / 10) % 10;
+	logtest_line[10] = '0' + n % 10;
+	logtest_line[11] = ' ';
+	logtest_line[LOGTEST_LINE_LEN - 2] = '\r';
+	logtest_line[LOGTEST_LINE_LEN - 1] = '\n';
+	logtest_line[LOGTEST_LINE_LEN] = 0;
+
+	/* DWT cycle counter: core debug unit, no peripheral init required */
+	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+	dwt_ok = (DWT->CTRL & DWT_CTRL_CYCCNTENA_Msk) != 0;
+
+	t0 = HAL_GetTick();
+	c0 = DWT->CYCCNT;
+
+	for (i = 0; i < n; i++) {
+		logtest_line[9]  = '0' + (i / 10) % 10;
+		logtest_line[10] = '0' + i % 10;
+		ulog(logtest_line);
+		if ((i & 7) == 7) HAL_IWDG_Refresh(&hiwdg2);	/* burst can be long */
+	}
+
+	c1 = DWT->CYCCNT;
+	t1 = HAL_GetTick();
+
+	us = dwt_ok ? (c1 - c0) / (BASE_CM4_FREQUENCY / 1000000u) : (t1 - t0) * 1000u;
+
+	ulog_fmt(CONM"LOGTEST_RESULT n=%d bytes=%lu dwt=%d us=%lu ms=%lu us_per_line=%lu lines_per_sec=%lu"CRLF,
+			n,
+			(unsigned long)((uint32_t)n * LOGTEST_LINE_LEN),
+			(int)dwt_ok,
+			(unsigned long)us,
+			(unsigned long)(t1 - t0),
+			(unsigned long)(us / (uint32_t)n),
+			(unsigned long)(us ? ((uint32_t)n * 1000000ull / us) : 0));
 }
 
 
@@ -261,6 +333,9 @@ void console_rcv(char * msg)
 		}
 		mki_send_small_leds();
 		ulog(CONM""STR_OK_CREATE("LEDS")CRLF);
+	}
+	else if (strcmp_s(msg, strlen(msg), "LOGTEST ")) {
+		console_logtest(str2int(msg + strlen("LOGTEST ")));
 	}
 	else if (strequals(msg, "LOAD_SETTING")) {
 		load_setting(SETTING_FILE_NAME);

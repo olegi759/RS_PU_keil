@@ -352,6 +352,7 @@ void net_init(void)
 		}
 
 		if (setting.chipsNetInfo[i].dhcp) {
+            
 			/* MAC должен быть в чипе до DHCP — DHCP_init читает SHAR */
 			setSHAR(setting.chipsNetInfo[i].mac, (uint8_t)i);
 

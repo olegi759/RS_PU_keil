@@ -136,7 +136,7 @@ void SoftUartTxProcess(SoftUart_S *SU)
 		// Data
 		else if(SU->TxBitCounter<(SoftUart_DATA_LEN+1))
 		{
-			DV=((SU->Buffer->Tx[SU->TxIndex])>>(SU->TxBitShift))&0x01;
+			DV=((SU->Buffer->Tx[SU->TxTail])>>(SU->TxBitShift))&0x01;
 			SoftUartTransmitBit(SU,DV);
 			SU->TxBitCounter++;
 			SU->TxBitShift++;
@@ -164,14 +164,18 @@ void SoftUartTxProcess(SoftUart_S *SU)
 		//Complete
 		else if(SU->TxBitCounter==SoftUart_IDEF_LEN_C2)
 		{
+			uint16_t tail;
+
 			// Reset Bit Counter
 			SU->TxBitCounter=0;
 
-			// Ready To Send Another Data
-			SU->TxIndex++;
+			// Byte has been shifted out: advance the ring tail
+			tail = SU->TxTail + 1;
+			if (tail >= SoftUartTxBufferSizeTX) tail = 0;
+			SU->TxTail = tail;
 
-			// Check Size of Data
-			if(SU->TxSize > SU->TxIndex)
+			// Ready To Send Another Data
+			if(SU->TxTail != SU->TxHead)
 			{
 				// Continue Sending
 				SU->TxNComplated=1;
@@ -182,7 +186,6 @@ void SoftUartTxProcess(SoftUart_S *SU)
 				// Finish
 				SU->TxNComplated=0;
 				SU->TxEnable=0;
-				SU->TxSize = 0; //raf
 			}
 		}
 	}
@@ -282,25 +285,70 @@ SoftUartState_E SoftUartPuts(uint8_t SoftUartNumber,uint8_t *Data,uint8_t Len)
 
 */
 
-	int i;
-
 	if(SoftUartNumber>=Number_Of_SoftUarts)return SoftUart_Error;
-	if(SUart[SoftUartNumber].TxNComplated) return SoftUart_Error;
 
-	SUart[SoftUartNumber].TxIndex=0;
-	SUart[SoftUartNumber].TxSize=Len;
+	/* the old single frame buffer is replaced by the TX ring buffer */
+	return SoftUartPutsRing(SoftUartNumber, Data, Len);
+}
 
-	for(i=0;i<Len;i++)
+/* -------------------------------------------------------------------------
+ * Non blocking transmit.
+ *
+ * Appends Len bytes to the TX ring buffer and returns at once. The bytes are
+ * shifted out by SoftUartTxProcess() from the TIM7 interrupt, one bit every
+ * 5 interrupt calls (9600 baud), so the caller is never blocked.
+ *
+ * Single producer (main loop) / single consumer (TIM7 ISR):
+ *   - producer writes Buffer->Tx[head..] and publishes TxHead,
+ *   - consumer reads Buffer->Tx[Tail] and advances TxTail.
+ * The head publication and the "start transmitter" decision are done with
+ * interrupts disabled (a few instructions) to avoid a lost wakeup when the
+ * ISR finishes the last byte exactly while the producer pushes a new one.
+ * ---------------------------------------------------------------------- */
+SoftUartState_E SoftUartPutsRing(uint8_t SoftUartNumber, const uint8_t *Data, uint16_t Len)
+{
+	SoftUart_S *SU;
+	uint16_t i, head, next;
+	uint32_t primask;
+
+	if (SoftUartNumber >= Number_Of_SoftUarts) return SoftUart_Error;
+	if (Data == 0 || Len == 0) return SoftUart_Error;
+
+	SU = &SUart[SoftUartNumber];
+
+	head = SU->TxHead;
+	for (i = 0; i < Len; i++)
 	{
-		SUart[SoftUartNumber].Buffer->Tx[i]= Data[i];
+		next = head + 1;
+		if (next >= SoftUartTxBufferSizeTX) next = 0;
+		if (next == SU->TxTail)					/* ring is full */
+		{
+			SU->TxDropped += (uint32_t)(Len - i);
+			break;
+		}
+		SU->Buffer->Tx[head] = Data[i];
+		head = next;
 	}
 
-	SUart[SoftUartNumber].TxNComplated=1;
-	SUart[SoftUartNumber].TxEnable=1;
+	primask = __get_PRIMASK();
+	__disable_irq();
+	SU->TxHead = head;
+	if (!SU->TxEnable)							/* transmitter was idle - start it */
+	{
+		SU->TxBitCounter = 0;
+		SU->TxBitShift   = 0;
+		SU->TxNComplated = 1;
+		SU->TxEnable     = 1;					/* published last */
+	}
+	if (!primask) __enable_irq();
 
-	return SoftUart_OK;
+	return (i == Len) ? SoftUart_OK : SoftUart_Error;
+}
 
-
+uint32_t SoftUartGetTxDropped(uint8_t SoftUartNumber)
+{
+	if (SoftUartNumber >= Number_Of_SoftUarts) return 0;
+	return SUart[SoftUartNumber].TxDropped;
 }
 
 // Capture RX and Get BitOffset

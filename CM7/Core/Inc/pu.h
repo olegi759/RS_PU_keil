@@ -101,6 +101,8 @@ const char * soundsrc2str(pu_soundsrc_t soundsrc);
 
 //extern uint32_t fire_lines;
 extern uint32_t fire_lines_imit;
+extern uint32_t fire_lines_manual;
+extern uint32_t pu_get_fire_lines_hw(void);
 //extern uint32_t fire_lines_off;
 extern uint32_t fire_lines_insig;
 
